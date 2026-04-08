@@ -1,0 +1,37 @@
+Package: drmeta
+Title: Design-Robust Meta-Analysis via Variance-Function Models
+Version: 0.1.0
+Authors@R: 
+    person("Subir", "Hait",
+           email = "haitsubi@msu.edu",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0004-9871-9677"))
+Description: Implements Design-Robust Meta-Analysis (DR-Meta), a
+    variance-function random-effects framework in which between-study
+    heterogeneity is modelled as a function of a study-level design
+    robustness index, allowing heterogeneity to depend systematically on
+    study quality or design strength rather than being treated as a single
+    nuisance parameter. The package provides profiled restricted maximum
+    likelihood (REML) estimation of the overall effect and
+    variance-function parameters, study-specific weights, heterogeneity
+    diagnostics (tau-squared, I-squared), influence and leave-one-out
+    analysis, and graphical tools including forest plots and influence
+    plots. The DR-Meta framework nests classical fixed-effects and
+    standard random-effects meta-analysis as special cases, making it a
+    strict generalisation of existing approaches.
+License: MIT + file LICENSE
+Encoding: UTF-8
+RoxygenNote: 7.3.3
+Depends: R (>= 4.1.0)
+Imports: grDevices, graphics, stats, utils
+Suggests: ggplot2 (>= 3.4.0), knitr, metafor (>= 4.0.0), rmarkdown,
+        testthat (>= 3.0.0)
+VignetteBuilder: knitr
+URL: https://github.com/causalfragility-lab/drmeta
+BugReports: https://github.com/causalfragility-lab/drmeta/issues
+NeedsCompilation: no
+Packaged: 2026-04-01 22:48:08 UTC; Subir
+Author: Subir Hait [aut, cre] (ORCID: <https://orcid.org/0009-0004-9871-9677>)
+Maintainer: Subir Hait <haitsubi@msu.edu>
+Repository: CRAN
+Date/Publication: 2026-04-08 18:40:03 UTC
