@@ -1,109 +1,85 @@
-# drmeta <img src="man/figures/logo.png" align="right" height="139" alt="" />
+# drmeta
 
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/causalfragility-lab/drmeta/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/causalfragility-lab/drmeta/actions/workflows/R-CMD-check.yaml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!-- badges: end -->
+**Design-Indexed Location-Scale Meta-Analysis**
 
-## Design-Robust Meta-Analysis: A Variance-Function Framework for Causal Credibility
+`drmeta` fits meta-analytic location-scale models in which residual
+between-study heterogeneity is an exponential function of a prespecified
+design-robustness index:
 
-**drmeta** implements the DR-Meta model of Hait (2026) — a
-variance-function random-effects framework that embeds causal design
-robustness directly into the heterogeneity structure of meta-analysis.
+```
+y_i ~ N( x_i'beta ,  v_i + tau0^2 * exp(-gamma * DR_i) )
+```
 
-### The core idea
+The constrained form imposes `gamma >= 0`, encoding the directional hypothesis
+that unexplained heterogeneity does not increase as design robustness
+improves. Setting `gamma = 0` recovers the conventional random-effects model
+exactly.
 
-Standard random-effects meta-analysis absorbs design-quality differences into
-a single constant $\tau^2$. This allows large-sample but weakly-identified
-studies to dominate pooled estimates. DR-Meta instead models between-study
-variance as a monotone-decreasing function of a design robustness index
-$\text{DR}_i \in [0,1]$:
+## What this model does and does not do
 
-$$y_i \sim N\!\bigl(\mu,\; \underbrace{v_i}_{\text{sampling}} +
-\underbrace{\tau^2(\text{DR}_i;\,\psi)}_{\text{design-dependent}}\bigr)$$
-
-Study weights $w_i = 1/\sigma_i^2$ therefore automatically down-weight weaker
-designs — not via ad-hoc quality multipliers, but through a coherent
-likelihood-based mechanism.
-
-### Special cases
-
-| Condition | DR-Meta reduces to |
-|---|---|
-| $\text{DR}_i = c$ (constant) | Classical random-effects (Proposition 1) |
-| $\tau_0^2 = 0$ | Fixed-effects meta-analysis (Proposition 2) |
+A scale model changes how precision is allocated across studies. It does
+**not** identify or remove a systematic design-linked shift in the conditional
+mean. If the mean varies with design robustness, the scale-only pooled
+estimate is a model-dependent weighted average, not the effect of a
+hypothetical perfectly designed study. Supply location moderators via `mods`
+when design-linked mean differences are plausible, and do not describe scale
+reweighting as confounding adjustment.
 
 ## Installation
+
 ```r
-# Install the development version from GitHub:
-devtools::install_github("causalfragility-lab/drmeta")
+# install.packages("remotes")
+remotes::install_github("causalfragility-lab/drmeta")
 ```
 
 ## Quick start
+
 ```r
 library(drmeta)
 
-# 1. Build the DR index
-dr <- dr_from_design(c("RCT", "DiD", "OLS", "IV", "matching"))
-
-# or from continuous sub-scores:
-dr <- dr_score(
-  balance = c(0.9, 0.6, 0.3, 0.8, 0.5),
-  overlap  = c(0.85, 0.7, 0.4, 0.75, 0.6),
-  design   = dr_from_design(c("RCT", "DiD", "OLS", "IV", "matching"))
+bcg <- utils::read.csv(
+  system.file("extdata", "bcg_design_robustness.csv", package = "drmeta")
 )
 
-# 2. Fit DR-Meta
-fit <- drmeta(yi = my_effects, vi = my_variances, dr = dr)
+# Constrained fit
+fit <- drmeta(yi = bcg[["yi"]], vi = bcg[["vi"]], dr = bcg[["dr"]])
 summary(fit)
 
-# 3. Visualise
-dr_forest(fit)       # forest plot ordered by DR
-dr_plot(fit)         # weights vs DR (Lemma 3)
-dr_plot_vfun(fit)    # estimated variance function
+# Minimum comparison set
+re  <- drmeta(bcg[["yi"]], bcg[["vi"]], bcg[["dr"]], gamma_fixed = 0)  # random effects
+ls  <- drmeta(bcg[["yi"]], bcg[["vi"]], bcg[["dr"]], constrained = FALSE)
+jls <- drmeta(bcg[["yi"]], bcg[["vi"]], bcg[["dr"]], mods = 1 - bcg[["dr"]])
 
-# 4. Diagnostics
-dr_heterogeneity(fit)  # Q, I², Proposition 6 decomposition
-dr_loo(fit)            # leave-one-out influence
+# Interpretation over observed support, not extrapolated to [0,1]
+dr_scale_attenuation(fit)
+dr_plot_vfun(fit)
 
-# 5. Publication bias
-dr_pub_bias(fit)  # PET / PEESE / Egger with DR-Meta weights
-dr_funnel(fit)    # funnel plot
+# Boundary-aware inference and influence
+drmeta_bootstrap_gamma(fit, B = 999, seed = 1)
+dr_loo(fit)
 ```
 
-## Key functions
+## Reporting
 
-| Function | Description |
-|---|---|
-| `drmeta()` | Fit DR-Meta via profiled REML (core estimation) |
-| `dr_score()` | Build DR index from continuous sub-scores |
-| `dr_from_design()` | Build DR index from design type labels |
-| `dr_weights()` | Compute and inspect DR-Meta weights |
-| `dr_variance()` | Evaluate the fitted variance function |
-| `dr_heterogeneity()` | Cochran's Q, I², H², Proposition 6 decomposition |
-| `dr_loo()` | Leave-one-out influence diagnostics |
-| `dr_forest()` | Forest plot ordered by DR |
-| `dr_plot()` | Weight vs DR diagnostic plot |
-| `dr_plot_vfun()` | Variance function curve |
-| `dr_pub_bias()` | PET / PEESE / Egger publication bias |
-| `dr_funnel()` | Funnel plot with DR-coloured points |
-| `normalize_01()` | Rescale any vector to [0,1] |
+Report `gamma` together with the observed range of the design index, the
+convergence and boundary status, and the fitted variance ratio or attenuation
+over a prespecified contrast **within** observed support. The magnitude of
+`gamma` alone depends on the scaling of the index and is not an invariant
+measure of design sensitivity.
 
-## Connection to the literature
+For a primary analysis, construct the design index without using the realized
+effect estimate, its standard error, its p-value, its confidence interval, or
+any outcome-dependent diagnostic. Scores that use such information define an
+exploratory analysis.
 
-DR-Meta is a special case of the **meta-analytic location-scale model**
-(Viechtbauer & Lopez-Lopez, 2022) in which the scale component is explicitly
-motivated by causal design theory. It is complementary to bias-model
-frameworks (Turner et al., 2009; Rhodes et al., 2015; Mathur & VanderWeele,
-2020), which adjust the *mean* for confounding while DR-Meta adjusts the
-*variance*.
+## Status
 
-## References
+Current version 0.2.2. `NEWS.md` documents the breaking changes from
+0.1.0, including the functions removed and the withdrawal of the
+design-explained variance decomposition, and the 0.2.1 change to
+`drmeta_bootstrap_gamma()`, which now short-circuits when the constrained
+scale gradient is estimated at the boundary.
 
-- Hait, S. (2026). *Design-Robust Meta-Analysis: A Variance-Function
-  Framework for Causal Credibility*. Unpublished manuscript.
-- Viechtbauer, W., & Lopez-Lopez, J. A. (2022). *Research Synthesis Methods,
-  13*, 697–715. <https://doi.org/10.1002/jrsm.1562>
-- Turner, R. M., et al. (2009). *JRSS-A, 172*, 21–47.
-- Rhodes, K. M., et al. (2015). *JRSS-A, 178*, 641–666.
-- Mathur, M. B., & VanderWeele, T. J. (2020). *JASA, 115*, 1190–1204.
+## License
+
+MIT

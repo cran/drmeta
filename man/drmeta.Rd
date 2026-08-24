@@ -2,71 +2,63 @@
 % Please edit documentation in R/drmeta.R
 \name{drmeta}
 \alias{drmeta}
-\title{Fit a Design-Robust Meta-Analysis (DR-Meta) Model}
+\title{Fit a design-indexed meta-analytic location-scale model}
 \usage{
 drmeta(
   yi,
   vi,
-  dr = NULL,
-  vfun = c("exponential", "linear"),
+  dr,
+  mods = NULL,
   method = c("REML", "ML"),
-  slab = NULL,
-  control = list()
+  constrained = TRUE,
+  gamma_max = 8,
+  gamma_fixed = NULL,
+  control = list(),
+  .quiet = FALSE
 )
 }
 \arguments{
-\item{yi}{Numeric vector of \eqn{k} effect-size estimates.}
+\item{yi}{Numeric vector of study effect estimates.}
 
-\item{vi}{Numeric vector of \eqn{k} sampling variances (all must be > 0).}
+\item{vi}{Numeric vector of sampling variances.}
 
-\item{dr}{Numeric vector of \eqn{k} design robustness indices in the
-interval \eqn{[0, 1]}.  If \code{NULL}, a warning is issued and all
-studies are assigned \eqn{\mathrm{DR}_i = 0.5}.}
+\item{dr}{Numeric design-robustness index in \eqn{[0, 1]}.}
 
-\item{vfun}{Variance function: \code{"exponential"} (default) or
-\code{"linear"}.}
+\item{mods}{Optional numeric vector or matrix of location moderators. An
+intercept is added automatically.}
 
-\item{method}{Estimation method: \code{"REML"} (default) or \code{"ML"}.}
+\item{method}{Either "REML" or "ML".}
 
-\item{slab}{Optional character vector of study labels.}
+\item{constrained}{If TRUE, impose gamma >= 0. If FALSE, allow either sign.}
 
-\item{control}{List of control arguments passed to \code{stats::optim}.}
+\item{gamma_max}{Finite optimization bound for abs(gamma). The default,
+8, matches the range used in the simulation study reported in the
+accompanying manuscript. Refit under a wider bound whenever the estimate
+piles up near it.}
+
+\item{gamma_fixed}{Optional fixed value for gamma, used for null fitting.}
+
+\item{control}{Optional list passed to optim().}
+
+\item{.quiet}{If TRUE, suppress the design-diagnostic warnings about the
+distribution of \code{dr}. Intended for internal refitting, where the
+design index is identical across calls and the diagnostics would repeat
+without conveying new information. Errors and input validation are
+unaffected.}
 }
 \value{
-An object of class \code{"drmeta"} (a named list). Key components:
-\code{mu} (pooled estimate), \code{se}, \code{ci.lb}, \code{ci.ub},
-\code{zval}, \code{pval}, \code{tau0sq}, \code{gamma}, \code{tau2_i},
-\code{sigma2_i}, \code{weights}, \code{loglik}, \code{reml_loglik},
-\code{AIC}, \code{BIC}, \code{k}, \code{yi}, \code{vi}, \code{dr},
-\code{slab}, \code{vfun}, \code{method}, \code{converged},
-\code{optim_out}, \code{call}.
+An object of class \code{drmeta}: a list whose components include
+\code{beta} (location coefficients), \code{vcov}, \code{ci_beta},
+\code{tau0sq}, \code{gamma}, \code{tau2i}, \code{sigma2},
+\code{weights}, \code{residuals}, \code{logLik}, \code{method},
+\code{constrained}, \code{convergence}, and the supplied data.
 }
 \description{
-Fits a random-effects meta-analysis model in which between-study
-heterogeneity is a monotone-decreasing function of each study's design
-robustness index \eqn{\mathrm{DR}_i \in [0,1]}.  Studies with higher design
-robustness receive less heterogeneity weight, implementing Proposition 1 of
-Hait (2025).
+Fit a design-indexed meta-analytic location-scale model
 }
 \examples{
-set.seed(42)
-k  <- 20
-dr <- runif(k, 0.1, 0.9)
-vi <- runif(k, 0.01, 0.05)
-tau2_true <- 0.04 * exp(-2 * dr)
-yi <- rnorm(k, 0.3, sqrt(vi + tau2_true))
-
-fit <- drmeta(yi, vi, dr)
-print(fit)
+path <- system.file("extdata", "bcg_design_robustness.csv", package = "drmeta")
+bcg <- utils::read.csv(path)
+fit <- drmeta(yi = bcg[["yi"]], vi = bcg[["vi"]], dr = bcg[["dr"]])
 summary(fit)
-
-}
-\references{
-Hait, S. (2025). Design-Robust Meta-Analysis: A Variance-Function
-Framework for Causal Credibility.
-}
-\seealso{
-\code{\link{dr_heterogeneity}}, \code{\link{dr_loo}},
-\code{\link{dr_pub_bias}}, \code{\link{dr_forest}},
-\code{\link{dr_score}}, \code{\link{dr_from_design}}
 }
