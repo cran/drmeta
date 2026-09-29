@@ -1,3 +1,28 @@
+# drmeta 0.2.3
+
+## New features
+
+* `dr_shape_check()` compares a grouped categorical scale model with constant
+  heterogeneity and reports whether the fitted pattern is monotone, has an
+  interior peak or trough, or is otherwise nonmonotone. The diagnostic uses
+  the suggested `metafor` package and leaves the primary `drmeta` fit
+  unchanged.
+
+* `drmeta()` and `dr_loo()` gain a `slab` argument. `dr_loo()` now returns
+  these study labels instead of row numbers, with row numbers converted to
+  character labels when `slab` is omitted.
+
+* `dr_shape_check()` handles intercept-only location models without passing a
+  null moderator object to the underlying numerical fit.
+
+## Validation and documentation
+
+* Added a full workflow vignette and independent numerical regression tests
+  for ML estimates, the nested ordinary meta-regression, and the bounded fit
+  recovered from informative starting values.
+
+* Updated the project URL to `https://github.com/subirhait/drmeta`.
+
 # drmeta 0.2.2
 
 * Documentation update and archival release. No changes to package code.

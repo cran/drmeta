@@ -68,23 +68,31 @@ test_that("leave-one-out returns one row per study", {
   set.seed(7)
   k <- 20; dr <- runif(k); vi <- runif(k, .005, .03)
   yi <- rnorm(k, .3, sqrt(vi + .10 * exp(-3 * dr)))
-  f <- drmeta(yi, vi, dr, .quiet = TRUE)
+  labels <- paste("Study", seq_len(k))
+  f <- drmeta(yi, vi, dr, slab = labels, .quiet = TRUE)
   loo <- dr_loo(f)
   expect_equal(nrow(loo), k)
+  expect_identical(loo$study, labels)
   expect_true(all(c("delta_est", "delta_gamma", "influential") %in% names(loo)))
+  override <- paste("Trial", seq_len(k))
+  expect_identical(dr_loo(f, slab = override)$study, override)
+  expect_error(dr_loo(f, slab = override[-1]), "one non-missing label")
 })
 
 test_that("dr_score normalises weights and clips to the unit interval", {
   s <- suppressWarnings(dr_score(a = c(0, .5, 1.4), b = c(1, .5, 0), weights = c(3, 1)))
   expect_true(all(s >= 0 & s <= 1))
   expect_equal(unname(s[3]), .75 * 1 + .25 * 0)
-  expect_error(dr_score(a = 1:3, b = 1:3, weights = c(0, 0)), "nonnegative")
+  expect_error(dr_score(a = c(0, .5, 1), b = c(1, .5, 0),
+                        weights = c(0, 0)), "nonnegative")
 })
 
 test_that("input validation rejects malformed data", {
   expect_error(drmeta(1:5, rep(-1, 5), seq(0, 1, length.out = 5)), "positive")
   expect_error(drmeta(1:5, rep(.1, 5), seq(0, 2, length.out = 5)), "\\[0,1\\]")
   expect_error(drmeta(1:2, rep(.1, 2), c(0, 1)), "at least three")
+  expect_error(drmeta(1:5, rep(.1, 5), seq(0, 1, length.out = 5),
+                      slab = letters[1:4]), "one non-missing label")
 })
 
 test_that("bootstrap short-circuits at the boundary", {
@@ -97,4 +105,17 @@ test_that("bootstrap short-circuits at the boundary", {
   expect_equal(b$statistic, 0)
   expect_equal(b$p.value, 1)
   expect_equal(b$B_used, 0L)
+})
+
+test_that("bootstrap runs for a clearly positive scale gradient", {
+  dr <- rep(c(0, .5, 1), each = 12)
+  amp <- rep(c(.8, .25, .04), each = 12)
+  yi <- .3 + rep(c(-1, 1), 18) * amp
+  vi <- rep(.002, length(yi))
+  fit <- suppressWarnings(drmeta(yi, vi, dr, method = "ML", .quiet = TRUE))
+  expect_gt(fit$gamma, 0)
+  b <- suppressWarnings(drmeta_bootstrap_gamma(fit, B = 9, seed = 9))
+  expect_false(b$boundary)
+  expect_gt(b$B_used, 0L)
+  expect_true(b$p.value > 0 && b$p.value <= 1)
 })

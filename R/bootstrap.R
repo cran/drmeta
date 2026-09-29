@@ -71,6 +71,7 @@ drmeta_bootstrap_gamma <- function(object, B = 999, seed = NULL,
 
   null <- drmeta(object$yi, object$vi, object$dr,
                  mods = if (object$p > 1) object$X[, -1, drop = FALSE] else NULL,
+                 slab = object$slab,
                  method = object$method, constrained = TRUE, gamma_fixed = 0,
                  gamma_max = object$gamma_max, .quiet = TRUE)
   lr_obs <- max(0, 2 * (object$logLik - null$logLik))
@@ -101,9 +102,11 @@ drmeta_bootstrap_gamma <- function(object, B = 999, seed = NULL,
     yb <- stats::rnorm(null$k, mu0, sd0)
     res <- tryCatch({
       f0 <- drmeta(yb, null$vi, null$dr, mods = mods0,
+                   slab = null$slab,
                    method = null$method, constrained = TRUE, gamma_fixed = 0,
                    gamma_max = null$gamma_max, .quiet = TRUE)
       f1 <- drmeta(yb, null$vi, null$dr, mods = mods0,
+                   slab = null$slab,
                    method = null$method, constrained = TRUE,
                    gamma_max = null$gamma_max, .quiet = TRUE)
       # A statistic evaluated at a non-optimal point is not a draw from the

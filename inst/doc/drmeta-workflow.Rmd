@@ -1,0 +1,193 @@
+---
+title: "Design-indexed heterogeneity with drmeta"
+author: "Subir Hait"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Design-indexed heterogeneity with drmeta}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>",
+                      fig.width = 6, fig.height = 4)
+library(drmeta)
+library(metafor)
+library(metadat)
+```
+
+## Question and model
+
+`drmeta` examines whether residual between-study heterogeneity follows a
+prespecified ordered study-design score. Its model is
+
+$$
+y_i \sim N\{x_i^\top\beta,\ v_i + \tau_0^2\exp(-\gamma d_i)\}.
+$$
+
+The default restriction $\gamma\geq0$ encodes a constant or decreasing
+variance function. It is a hypothesis to check. It does not make the design
+score a quality weight, remove bias, or adjust a design-related mean shift.
+
+This vignette uses the 58-study CBT recidivism data in `metadat`. The score is
+declared before fitting: nonequivalent groups 0, matched groups 0.5, and
+randomized trials 1.
+
+```{r data}
+dat <- metadat::dat.landenberger2005
+design <- tolower(trimws(as.character(dat$design)))
+dat$dr <- c(nonequiv = 0, match = .5, rct = 1)[design]
+stopifnot(!anyNA(dat$dr))
+dat <- metafor::escalc("OR", ai = n.cbt.non, bi = n.cbt.rec,
+                       ci = n.ctrl.non, di = n.ctrl.rec, data = dat)
+table(dat$dr)
+```
+
+## Fit a minimum comparison set
+
+The four fits separate constant heterogeneity, a directional scale relation,
+an unrestricted scale relation, and a location-plus-scale model.
+
+```{r four-fits}
+constant <- drmeta(dat$yi, dat$vi, dat$dr, gamma_fixed = 0,
+                   slab = dat$study)
+directional <- drmeta(dat$yi, dat$vi, dat$dr, slab = dat$study)
+unrestricted <- drmeta(dat$yi, dat$vi, dat$dr, constrained = FALSE,
+                       slab = dat$study)
+joint <- drmeta(dat$yi, dat$vi, dat$dr, mods = 1 - dat$dr,
+                slab = dat$study)
+
+data.frame(
+  model = c("constant", "directional", "unrestricted", "joint"),
+  beta0 = vapply(list(constant, directional, unrestricted, joint),
+                 function(x) unname(x$beta[1]), numeric(1)),
+  tau0sq = vapply(list(constant, directional, unrestricted, joint),
+                  function(x) x$tau0sq, numeric(1)),
+  gamma = vapply(list(constant, directional, unrestricted, joint),
+                 function(x) x$gamma, numeric(1))
+)
+```
+
+The full-data directional estimate is at $\gamma=0$. The unrestricted value
+is also effectively zero. This says the monotone decreasing pattern is not
+supported. It does not establish that heterogeneity is identical across the
+three design categories.
+
+## Check the shape before interpreting zero as flatness
+
+A categorical scale fit can reveal a pattern that the one-parameter monotone
+curve cannot represent. Supply an ordered factor so the printed group order
+matches the design score.
+
+```{r shape-check}
+ordered_design <- factor(design,
+                         levels = c("nonequiv", "match", "rct"))
+shape <- dr_shape_check(directional, ordered_design)
+shape
+```
+
+The full data have fitted $\tau^2$ values of approximately 0, 0.157, and
+0.018 for nonequivalent, matched, and randomized studies. The categorical
+versus constant-scale likelihood-ratio statistic is about 5.99 ($p\approx
+.05$). The middle peak is outside the shape of a monotone exponential curve,
+so the boundary estimate partly reflects shape misspecification.
+
+The likelihood-ratio reference is approximate when a grouped variance is near
+zero. Treat this as a diagnostic, and report that limitation.
+
+## Boundary inference and influence
+
+When the directional estimate is zero, `drmeta_bootstrap_gamma()` reports the
+boundary and does not simulate an uninformative null distribution.
+
+```{r boundary}
+drmeta_bootstrap_gamma(directional, B = 999, seed = 20260928)
+```
+
+Study labels flow from `slab` into the leave-one-out results.
+
+```{r loo}
+loo <- dr_loo(directional)
+anderson <- loo[loo$study == "Anderson (2002)", ]
+anderson[, c("study", "est_loo", "tau0sq_loo", "gamma_loo")]
+sum(loo$gamma_loo > 0, na.rm = TRUE)
+```
+
+Deleting Anderson (2002) gives a constant-mean estimate near 0.340, baseline
+variance near 0.0416, and $\gamma\approx0.457$, a fitted 36.7% variance
+decrease over scores 0 to 1. Twenty-three of the 58 single deletions give a
+positive gradient. These results show instability in the point estimate.
+They do not license deletion.
+
+The positive Anderson-deletion fit also needs boundary-aware inference.
+
+```{r anderson-bootstrap}
+keep <- dat$study != "Anderson (2002)"
+without_anderson <- drmeta(dat$yi[keep], dat$vi[keep], dat$dr[keep],
+                           slab = dat$study[keep])
+anderson_test <- drmeta_bootstrap_gamma(without_anderson, B = 999,
+                                        seed = 20260928)
+c(LR = anderson_test$statistic, p = anderson_test$p.value)
+```
+
+The verified run gives LR about 0.065 and $p=0.247$. Deletion changes the point
+estimate, while the inferential conclusion remains a lack of clear support
+for a positive gradient. After this deletion, the categorical pattern also
+weakens (LR about 1.55, $p=0.46$).
+
+## Score sensitivity
+
+Changing category spacing and changing the contrast answer different
+questions. A randomized-versus-rest score gives $\hat\gamma\approx1.78$ in
+this example, but it reduces the scale predictor to two support points.
+
+```{r score-sensitivity}
+randomized_vs_rest <- as.numeric(dat$dr == 1)
+binary_fit <- drmeta(dat$yi, dat$vi, randomized_vs_rest,
+                     slab = dat$study)
+binary_fit$gamma
+
+matched_at_075 <- ifelse(dat$dr == .5, .75, dat$dr)
+spacing_fit <- drmeta(dat$yi, dat$vi, matched_at_075,
+                      slab = dat$study)
+c(primary = directional$gamma,
+  matched_at_075 = spacing_fit$gamma,
+  randomized_vs_rest = binary_fit$gamma)
+```
+
+Prespecify the primary coding. Use sensitivity fits to show dependence on
+defensible alternatives, not to select the most favorable result.
+
+## Numerical validation
+
+The package includes a regression check against a general location-scale
+implementation. For `metafor::rma(scale = ~ dr)`, the parameter map is
+$\alpha_0=\log(\tau_0^2)$ and $\alpha_1=-\gamma$. With ML and no constraint,
+the two packages agree to numerical tolerance, including the log-likelihood.
+With REML, point estimates agree, while raw log-likelihood values use
+different additive constants and should not be compared across packages.
+This is an implementation check rather than a separate analysis goal.
+
+```{r numerical-validation}
+mf <- metafor::rma(yi, vi, scale = ~ dr, data = dat, method = "ML")
+dm <- drmeta(dat$yi, dat$vi, dat$dr, constrained = FALSE,
+             method = "ML", slab = dat$study)
+stopifnot(
+  abs(unname(dm$beta[1] - mf$beta[1])) < 1e-5,
+  abs(unname(dm$tau0sq - exp(mf$alpha[1]))) < 1e-5,
+  abs(unname(dm$gamma + mf$alpha[2])) < 1e-5,
+  abs(as.numeric(logLik(dm)) - as.numeric(logLik(mf))) < 1e-5
+)
+```
+
+## Reporting checklist
+
+Report the score definition and support, the direction of the effect measure,
+the constant, directional, unrestricted, and joint fits, boundary status,
+fitted variance contrasts within observed support, the grouped shape check,
+and leave-one-out changes. A scale model changes weights. It does not remove a
+score-related location difference or establish a causal effect of design.
+
+```{r session-info}
+sessionInfo()
+```

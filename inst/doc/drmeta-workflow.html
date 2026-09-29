@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Subir Hait" />
+
+
+<title>Design-indexed heterogeneity with drmeta</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Design-indexed heterogeneity with
+drmeta</h1>
+<h4 class="author">Subir Hait</h4>
+
+
+
+<div id="question-and-model" class="section level2">
+<h2>Question and model</h2>
+<p><code>drmeta</code> examines whether residual between-study
+heterogeneity follows a prespecified ordered study-design score. Its
+model is</p>
+<p><span class="math display">\[
+y_i \sim N\{x_i^\top\beta,\ v_i + \tau_0^2\exp(-\gamma d_i)\}.
+\]</span></p>
+<p>The default restriction <span class="math inline">\(\gamma\geq0\)</span> encodes a constant or
+decreasing variance function. It is a hypothesis to check. It does not
+make the design score a quality weight, remove bias, or adjust a
+design-related mean shift.</p>
+<p>This vignette uses the 58-study CBT recidivism data in
+<code>metadat</code>. The score is declared before fitting:
+nonequivalent groups 0, matched groups 0.5, and randomized trials 1.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>dat <span class="ot">&lt;-</span> metadat<span class="sc">::</span>dat.landenberger2005</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">tolower</span>(<span class="fu">trimws</span>(<span class="fu">as.character</span>(dat<span class="sc">$</span>design)))</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>dat<span class="sc">$</span>dr <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">nonequiv =</span> <span class="dv">0</span>, <span class="at">match =</span> .<span class="dv">5</span>, <span class="at">rct =</span> <span class="dv">1</span>)[design]</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="sc">!</span><span class="fu">anyNA</span>(dat<span class="sc">$</span>dr))</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>dat <span class="ot">&lt;-</span> metafor<span class="sc">::</span><span class="fu">escalc</span>(<span class="st">&quot;OR&quot;</span>, <span class="at">ai =</span> n.cbt.non, <span class="at">bi =</span> n.cbt.rec,</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>                       <span class="at">ci =</span> n.ctrl.non, <span class="at">di =</span> n.ctrl.rec, <span class="at">data =</span> dat)</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="fu">table</span>(dat<span class="sc">$</span>dr)</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co">#&gt;   0 0.5   1 </span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt;  16  23  19</span></span></code></pre></div>
+</div>
+<div id="fit-a-minimum-comparison-set" class="section level2">
+<h2>Fit a minimum comparison set</h2>
+<p>The four fits separate constant heterogeneity, a directional scale
+relation, an unrestricted scale relation, and a location-plus-scale
+model.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>constant <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, dat<span class="sc">$</span>dr, <span class="at">gamma_fixed =</span> <span class="dv">0</span>,</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>                   <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>directional <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, dat<span class="sc">$</span>dr, <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>unrestricted <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, dat<span class="sc">$</span>dr, <span class="at">constrained =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>                       <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>joint <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, dat<span class="sc">$</span>dr, <span class="at">mods =</span> <span class="dv">1</span> <span class="sc">-</span> dat<span class="sc">$</span>dr,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>                <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">c</span>(<span class="st">&quot;constant&quot;</span>, <span class="st">&quot;directional&quot;</span>, <span class="st">&quot;unrestricted&quot;</span>, <span class="st">&quot;joint&quot;</span>),</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">beta0 =</span> <span class="fu">vapply</span>(<span class="fu">list</span>(constant, directional, unrestricted, joint),</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>                 <span class="cf">function</span>(x) <span class="fu">unname</span>(x<span class="sc">$</span>beta[<span class="dv">1</span>]), <span class="fu">numeric</span>(<span class="dv">1</span>)),</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">tau0sq =</span> <span class="fu">vapply</span>(<span class="fu">list</span>(constant, directional, unrestricted, joint),</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>                  <span class="cf">function</span>(x) x<span class="sc">$</span>tau0sq, <span class="fu">numeric</span>(<span class="dv">1</span>)),</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">gamma =</span> <span class="fu">vapply</span>(<span class="fu">list</span>(constant, directional, unrestricted, joint),</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>                 <span class="cf">function</span>(x) x<span class="sc">$</span>gamma, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>)</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;          model     beta0    tau0sq         gamma</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt; 1     constant 0.4225970 0.1046084  0.0000000000</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt; 2  directional 0.4225966 0.1046072  0.0000000000</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt; 3 unrestricted 0.4225988 0.1045828 -0.0004723874</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt; 4        joint 0.4387907 0.1084085  0.0000000000</span></span></code></pre></div>
+<p>The full-data directional estimate is at <span class="math inline">\(\gamma=0\)</span>. The unrestricted value is also
+effectively zero. This says the monotone decreasing pattern is not
+supported. It does not establish that heterogeneity is identical across
+the three design categories.</p>
+</div>
+<div id="check-the-shape-before-interpreting-zero-as-flatness" class="section level2">
+<h2>Check the shape before interpreting zero as flatness</h2>
+<p>A categorical scale fit can reveal a pattern that the one-parameter
+monotone curve cannot represent. Supply an ordered factor so the printed
+group order matches the design score.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>ordered_design <span class="ot">&lt;-</span> <span class="fu">factor</span>(design,</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>                         <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;nonequiv&quot;</span>, <span class="st">&quot;match&quot;</span>, <span class="st">&quot;rct&quot;</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>shape <span class="ot">&lt;-</span> <span class="fu">dr_shape_check</span>(directional, ordered_design)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>shape</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Grouped scale-shape diagnostic</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;     group  n      tau2</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;  nonequiv 16 5.555e-08</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;     match 23 1.571e-01</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;       rct 19 1.801e-02</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; Pattern: interior peak </span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; LR = 5.991  df = 2  p = 0.05</span></span></code></pre></div>
+<p>The full data have fitted <span class="math inline">\(\tau^2\)</span>
+values of approximately 0, 0.157, and 0.018 for nonequivalent, matched,
+and randomized studies. The categorical versus constant-scale
+likelihood-ratio statistic is about 5.99 (<span class="math inline">\(p\approx
+.05\)</span>). The middle peak is outside the shape of a monotone
+exponential curve, so the boundary estimate partly reflects shape
+misspecification.</p>
+<p>The likelihood-ratio reference is approximate when a grouped variance
+is near zero. Treat this as a diagnostic, and report that
+limitation.</p>
+</div>
+<div id="boundary-inference-and-influence" class="section level2">
+<h2>Boundary inference and influence</h2>
+<p>When the directional estimate is zero,
+<code>drmeta_bootstrap_gamma()</code> reports the boundary and does not
+simulate an uninformative null distribution.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">drmeta_bootstrap_gamma</span>(directional, <span class="at">B =</span> <span class="dv">999</span>, <span class="at">seed =</span> <span class="dv">20260928</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; Parametric-bootstrap test of the scale gradient</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; H0: gamma = 0   vs   H1: gamma &gt; 0   (boundary null)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; The constrained estimate is at the boundary (gamma = 0).</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; The likelihood-ratio statistic is zero by construction, so the</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; bootstrap is uninformative and was not run. The data provide no</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; support for a positive scale gradient.</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; tau0^2: 0.1046 </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; Refit with constrained = FALSE to check whether the unrestricted</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; gradient is negative, which would contradict the constraint rather</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt; than merely fail to support it.</span></span></code></pre></div>
+<p>Study labels flow from <code>slab</code> into the leave-one-out
+results.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>loo <span class="ot">&lt;-</span> <span class="fu">dr_loo</span>(directional)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>anderson <span class="ot">&lt;-</span> loo[loo<span class="sc">$</span>study <span class="sc">==</span> <span class="st">&quot;Anderson (2002)&quot;</span>, ]</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>anderson[, <span class="fu">c</span>(<span class="st">&quot;study&quot;</span>, <span class="st">&quot;est_loo&quot;</span>, <span class="st">&quot;tau0sq_loo&quot;</span>, <span class="st">&quot;gamma_loo&quot;</span>)]</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;              study  est_loo tau0sq_loo gamma_loo</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; 54 Anderson (2002) 0.339541 0.04156371 0.4570625</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="fu">sum</span>(loo<span class="sc">$</span>gamma_loo <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; [1] 23</span></span></code></pre></div>
+<p>Deleting Anderson (2002) gives a constant-mean estimate near 0.340,
+baseline variance near 0.0416, and <span class="math inline">\(\gamma\approx0.457\)</span>, a fitted 36.7%
+variance decrease over scores 0 to 1. Twenty-three of the 58 single
+deletions give a positive gradient. These results show instability in
+the point estimate. They do not license deletion.</p>
+<p>The positive Anderson-deletion fit also needs boundary-aware
+inference.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>keep <span class="ot">&lt;-</span> dat<span class="sc">$</span>study <span class="sc">!=</span> <span class="st">&quot;Anderson (2002)&quot;</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>without_anderson <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi[keep], dat<span class="sc">$</span>vi[keep], dat<span class="sc">$</span>dr[keep],</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                           <span class="at">slab =</span> dat<span class="sc">$</span>study[keep])</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>anderson_test <span class="ot">&lt;-</span> <span class="fu">drmeta_bootstrap_gamma</span>(without_anderson, <span class="at">B =</span> <span class="dv">999</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                                        <span class="at">seed =</span> <span class="dv">20260928</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">c</span>(<span class="at">LR =</span> anderson_test<span class="sc">$</span>statistic, <span class="at">p =</span> anderson_test<span class="sc">$</span>p.value)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;         LR          p </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 0.06497798 0.24700000</span></span></code></pre></div>
+<p>The verified run gives LR about 0.065 and <span class="math inline">\(p=0.247\)</span>. Deletion changes the point
+estimate, while the inferential conclusion remains a lack of clear
+support for a positive gradient. After this deletion, the categorical
+pattern also weakens (LR about 1.55, <span class="math inline">\(p=0.46\)</span>).</p>
+</div>
+<div id="score-sensitivity" class="section level2">
+<h2>Score sensitivity</h2>
+<p>Changing category spacing and changing the contrast answer different
+questions. A randomized-versus-rest score gives <span class="math inline">\(\hat\gamma\approx1.78\)</span> in this example,
+but it reduces the scale predictor to two support points.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>randomized_vs_rest <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(dat<span class="sc">$</span>dr <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>binary_fit <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, randomized_vs_rest,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                     <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; Warning in drmeta(dat$yi, dat$vi, randomized_vs_rest, slab = dat$study): The</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt; design-robustness index has fewer than three distinct values; gamma may be</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; weakly identified.</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>binary_fit<span class="sc">$</span>gamma</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; [1] 1.781187</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>matched_at_075 <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(dat<span class="sc">$</span>dr <span class="sc">==</span> .<span class="dv">5</span>, .<span class="dv">75</span>, dat<span class="sc">$</span>dr)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>spacing_fit <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, matched_at_075,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>                      <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="fu">c</span>(<span class="at">primary =</span> directional<span class="sc">$</span>gamma,</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">matched_at_075 =</span> spacing_fit<span class="sc">$</span>gamma,</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="at">randomized_vs_rest =</span> binary_fit<span class="sc">$</span>gamma)</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt;            primary     matched_at_075 randomized_vs_rest </span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt;           0.000000           0.000000           1.781187</span></span></code></pre></div>
+<p>Prespecify the primary coding. Use sensitivity fits to show
+dependence on defensible alternatives, not to select the most favorable
+result.</p>
+</div>
+<div id="numerical-validation" class="section level2">
+<h2>Numerical validation</h2>
+<p>The package includes a regression check against a general
+location-scale implementation. For
+<code>metafor::rma(scale = ~ dr)</code>, the parameter map is <span class="math inline">\(\alpha_0=\log(\tau_0^2)\)</span> and <span class="math inline">\(\alpha_1=-\gamma\)</span>. With ML and no
+constraint, the two packages agree to numerical tolerance, including the
+log-likelihood. With REML, point estimates agree, while raw
+log-likelihood values use different additive constants and should not be
+compared across packages. This is an implementation check rather than a
+separate analysis goal.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>mf <span class="ot">&lt;-</span> metafor<span class="sc">::</span><span class="fu">rma</span>(yi, vi, <span class="at">scale =</span> <span class="sc">~</span> dr, <span class="at">data =</span> dat, <span class="at">method =</span> <span class="st">&quot;ML&quot;</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>dm <span class="ot">&lt;-</span> <span class="fu">drmeta</span>(dat<span class="sc">$</span>yi, dat<span class="sc">$</span>vi, dat<span class="sc">$</span>dr, <span class="at">constrained =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>             <span class="at">method =</span> <span class="st">&quot;ML&quot;</span>, <span class="at">slab =</span> dat<span class="sc">$</span>study)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="fu">stopifnot</span>(</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="fu">abs</span>(<span class="fu">unname</span>(dm<span class="sc">$</span>beta[<span class="dv">1</span>] <span class="sc">-</span> mf<span class="sc">$</span>beta[<span class="dv">1</span>])) <span class="sc">&lt;</span> <span class="fl">1e-5</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">abs</span>(<span class="fu">unname</span>(dm<span class="sc">$</span>tau0sq <span class="sc">-</span> <span class="fu">exp</span>(mf<span class="sc">$</span>alpha[<span class="dv">1</span>]))) <span class="sc">&lt;</span> <span class="fl">1e-5</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="fu">abs</span>(<span class="fu">unname</span>(dm<span class="sc">$</span>gamma <span class="sc">+</span> mf<span class="sc">$</span>alpha[<span class="dv">2</span>])) <span class="sc">&lt;</span> <span class="fl">1e-5</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="fu">abs</span>(<span class="fu">as.numeric</span>(<span class="fu">logLik</span>(dm)) <span class="sc">-</span> <span class="fu">as.numeric</span>(<span class="fu">logLik</span>(mf))) <span class="sc">&lt;</span> <span class="fl">1e-5</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="reporting-checklist" class="section level2">
+<h2>Reporting checklist</h2>
+<p>Report the score definition and support, the direction of the effect
+measure, the constant, directional, unrestricted, and joint fits,
+boundary status, fitted variance contrasts within observed support, the
+grouped shape check, and leave-one-out changes. A scale model changes
+weights. It does not remove a score-related location difference or
+establish a causal effect of design.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24 ucrt)</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-w64-mingw32/x64</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; Running under: Windows 11 x64 (build 26200)</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;   LAPACK version 3.12.1</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; [1] LC_COLLATE=C                          </span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; [2] LC_CTYPE=English_United States.utf8   </span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; [3] LC_MONETARY=English_United States.utf8</span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt; [4] LC_NUMERIC=C                          </span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; [5] LC_TIME=English_United States.utf8    </span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt; [1] metafor_5.0-1       numDeriv_2016.8-1.1 metadat_1.6-0      </span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt; [4] Matrix_1.7-5        drmeta_0.2.3       </span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt;  [1] nlme_3.1-169      cli_3.6.6         knitr_1.51        rlang_1.2.0      </span></span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="co">#&gt;  [5] xfun_0.60         otel_0.2.0        jsonlite_2.0.0    htmltools_0.5.9  </span></span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="co">#&gt;  [9] sass_0.4.10       rmarkdown_2.31    grid_4.6.0        evaluate_1.0.5   </span></span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="co">#&gt; [13] jquerylib_0.1.4   fastmap_1.2.0     yaml_2.3.12       lifecycle_1.0.5  </span></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co">#&gt; [17] compiler_4.6.0    mathjaxr_2.0-0    rstudioapi_0.19.0 lattice_0.22-9   </span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co">#&gt; [21] digest_0.6.39     R6_2.6.1          bslib_0.11.0      tools_4.6.0      </span></span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="co">#&gt; [25] cachem_1.1.0</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

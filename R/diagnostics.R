@@ -98,8 +98,11 @@ dr_heterogeneity <- function(object) {
 #' gradient.
 #'
 #' @param object A fitted \code{drmeta} object.
+#' @param slab Optional study labels. By default, labels stored in
+#'   \code{object$slab} are used; row-number labels are used for older objects
+#'   without that component.
 #' @return A data frame with one row per omitted study, containing the study
-#'   index, its design-robustness value, the leave-one-out estimate of the
+#'   label, its design-robustness value, the leave-one-out estimate of the
 #'   first location coefficient and its change from the full fit, the
 #'   leave-one-out \code{tau0sq} and \code{gamma} with their changes, a
 #'   \code{converged} flag, and a logical \code{influential} column flagging
@@ -111,16 +114,21 @@ dr_heterogeneity <- function(object) {
 #' fit <- drmeta(yi = bcg[["yi"]], vi = bcg[["vi"]], dr = bcg[["dr"]])
 #' dr_loo(fit)
 #' @export
-dr_loo <- function(object) {
+dr_loo <- function(object, slab = object$slab) {
   if (!inherits(object, "drmeta")) stop("object must be a drmeta fit.")
   k <- object$k
   if (k < 4L) stop("Leave-one-out requires at least four studies.")
+  if (is.null(slab)) slab <- as.character(seq_len(k))
+  if (length(slab) != k || anyNA(slab))
+    stop("slab must contain one non-missing label per study.")
+  slab <- as.character(slab)
   mods_full <- if (object$p > 1L) object$X[, -1, drop = FALSE] else NULL
   se_full <- sqrt(object$vcov[1, 1])
   res <- lapply(seq_len(k), function(i) {
     fit <- tryCatch(
       drmeta(object$yi[-i], object$vi[-i], object$dr[-i],
              mods = if (is.null(mods_full)) NULL else mods_full[-i, , drop = FALSE],
+             slab = slab[-i],
              method = object$method, constrained = object$constrained,
              gamma_max = object$gamma_max, gamma_fixed = object$gamma_fixed,
              .quiet = TRUE),
@@ -132,7 +140,8 @@ dr_loo <- function(object) {
                gamma_loo = fit$gamma, converged = identical(as.numeric(fit$convergence), 0))
   })
   out <- do.call(rbind, res)
-  out <- cbind(study = seq_len(k), dr = object$dr, out)
+  out <- cbind(study = slab, dr = object$dr, out,
+               stringsAsFactors = FALSE)
   out$delta_est <- out$est_loo - unname(object$beta[1])
   out$delta_tau0sq <- out$tau0sq_loo - object$tau0sq
   out$delta_gamma <- out$gamma_loo - object$gamma

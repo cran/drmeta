@@ -5,6 +5,8 @@
 #' @param dr Numeric design-robustness index in \eqn{[0, 1]}.
 #' @param mods Optional numeric vector or matrix of location moderators. An
 #'   intercept is added automatically.
+#' @param slab Optional study labels. Defaults to the row numbers and is used
+#'   by study-level diagnostics such as \code{\link{dr_loo}}.
 #' @param method Either "REML" or "ML".
 #' @param constrained If TRUE, impose gamma >= 0. If FALSE, allow either sign.
 #' @param gamma_max Finite optimization bound for abs(gamma). The default,
@@ -21,7 +23,7 @@
 #' @return An object of class \code{drmeta}: a list whose components include
 #'   \code{beta} (location coefficients), \code{vcov}, \code{ci_beta},
 #'   \code{tau0sq}, \code{gamma}, \code{tau2i}, \code{sigma2},
-#'   \code{weights}, \code{residuals}, \code{logLik}, \code{method},
+#'   \code{weights}, \code{residuals}, \code{slab}, \code{logLik}, \code{method},
 #'   \code{constrained}, \code{convergence}, and the supplied data.
 #' @examples
 #' path <- system.file("extdata", "bcg_design_robustness.csv", package = "drmeta")
@@ -29,7 +31,8 @@
 #' fit <- drmeta(yi = bcg[["yi"]], vi = bcg[["vi"]], dr = bcg[["dr"]])
 #' summary(fit)
 #' @export
-drmeta <- function(yi, vi, dr, mods = NULL, method = c("REML", "ML"),
+drmeta <- function(yi, vi, dr, mods = NULL, slab = NULL,
+                   method = c("REML", "ML"),
                    constrained = TRUE, gamma_max = 8,
                    gamma_fixed = NULL, control = list(),
                    .quiet = FALSE) {
@@ -41,6 +44,10 @@ drmeta <- function(yi, vi, dr, mods = NULL, method = c("REML", "ML"),
     stop("Inputs must be finite and contain at least three studies.")
   if (any(vi <= 0)) stop("All sampling variances must be positive.")
   if (any(dr < 0 | dr > 1)) stop("dr must lie in [0,1].")
+  if (is.null(slab)) slab <- as.character(seq_len(k))
+  if (length(slab) != k || anyNA(slab))
+    stop("slab must contain one non-missing label per study.")
+  slab <- as.character(slab)
   if (!is.null(mods)) {
     M <- as.matrix(mods)
     if (nrow(M) != k) stop("mods must have one row per study.")
@@ -120,7 +127,8 @@ drmeta <- function(yi, vi, dr, mods = NULL, method = c("REML", "ML"),
   colnames(ci_beta) <- c("ci.lb", "ci.ub"); rownames(ci_beta) <- colnames(X)
   names(fit$beta) <- colnames(X); dimnames(fit$vcov) <- list(colnames(X), colnames(X))
   
-  out <- c(fit, list(yi = yi, vi = vi, dr = dr, X = X, k = k, p = p, df = df,
+  out <- c(fit, list(yi = yi, vi = vi, dr = dr, slab = slab,
+                     X = X, k = k, p = p, df = df,
                      method = method, constrained = constrained, gamma_max = gamma_max,
                      gamma_fixed = gamma_fixed, logLik = -opt$value,
                      convergence = opt$convergence, message = opt$message,

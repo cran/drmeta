@@ -9,6 +9,7 @@ drmeta(
   vi,
   dr,
   mods = NULL,
+  slab = NULL,
   method = c("REML", "ML"),
   constrained = TRUE,
   gamma_max = 8,
@@ -26,6 +27,9 @@ drmeta(
 
 \item{mods}{Optional numeric vector or matrix of location moderators. An
 intercept is added automatically.}
+
+\item{slab}{Optional study labels. Defaults to the row numbers and is used
+by study-level diagnostics such as \code{\link{dr_loo}}.}
 
 \item{method}{Either "REML" or "ML".}
 
@@ -50,7 +54,7 @@ unaffected.}
 An object of class \code{drmeta}: a list whose components include
 \code{beta} (location coefficients), \code{vcov}, \code{ci_beta},
 \code{tau0sq}, \code{gamma}, \code{tau2i}, \code{sigma2},
-\code{weights}, \code{residuals}, \code{logLik}, \code{method},
+\code{weights}, \code{residuals}, \code{slab}, \code{logLik}, \code{method},
 \code{constrained}, \code{convergence}, and the supplied data.
 }
 \description{

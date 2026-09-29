@@ -4,14 +4,18 @@
 \alias{dr_loo}
 \title{Leave-one-out influence diagnostics}
 \usage{
-dr_loo(object)
+dr_loo(object, slab = object$slab)
 }
 \arguments{
 \item{object}{A fitted \code{drmeta} object.}
+
+\item{slab}{Optional study labels. By default, labels stored in
+\code{object$slab} are used; row-number labels are used for older objects
+without that component.}
 }
 \value{
 A data frame with one row per omitted study, containing the study
-index, its design-robustness value, the leave-one-out estimate of the
+label, its design-robustness value, the leave-one-out estimate of the
 first location coefficient and its change from the full fit, the
 leave-one-out \code{tau0sq} and \code{gamma} with their changes, a
 \code{converged} flag, and a logical \code{influential} column flagging
